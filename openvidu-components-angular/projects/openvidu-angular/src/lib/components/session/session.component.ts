@@ -189,8 +189,8 @@ export class SessionComponent implements OnInit, OnDestroy {
 			await this.connectToSession();
 			// ios devices appear with blank video. Muting and unmuting it fix this problem
 			if (this.platformService.isIos() && this.participantService.isMyCameraActive()) {
-				await this.openviduService.publishVideo(false);
-				await this.openviduService.publishVideo(true);
+				await this.participantService.publishVideo(false);
+				await this.participantService.publishVideo(true);
 			}
 
 			if (this.libService.isRecordingEnabled()) {
@@ -263,20 +263,28 @@ export class SessionComponent implements OnInit, OnDestroy {
 
 	private async connectToSession(): Promise<void> {
 		try {
-			const webcamToken = this.openviduService.getWebcamToken();
-			const screenToken = this.openviduService.getScreenToken();
+			const nickname = this.participantService.getMyNickname();
+			const participantId = this.participantService.getLocalParticipant().id;
+			const screenPublisher = this.participantService.getMyScreenPublisher();
+			const cameraPublisher = this.participantService.getMyCameraPublisher();
 
 			if (this.participantService.haveICameraAndScreenActive()) {
-				await this.openviduService.connectSession(this.openviduService.getWebcamSession(), webcamToken);
-				await this.openviduService.connectSession(this.openviduService.getScreenSession(), screenToken);
-				await this.openviduService.publish(this.participantService.getMyCameraPublisher());
-				await this.openviduService.publish(this.participantService.getMyScreenPublisher());
+
+				const webcamSessionId = await this.openviduService.connectWebcamSession(participantId, nickname);
+				if (webcamSessionId) this.participantService.setMyCameraConnectionId(webcamSessionId);
+
+				const screenSessionId = await this.openviduService.connectScreenSession(participantId, nickname);
+				if (screenSessionId) this.participantService.setMyScreenConnectionId(screenSessionId);
+
+
+				await this.openviduService.publishCamera(cameraPublisher);
+				await this.openviduService.publishScreen(screenPublisher);
 			} else if (this.participantService.isOnlyMyScreenActive()) {
-				await this.openviduService.connectSession(this.openviduService.getScreenSession(), screenToken);
-				await this.openviduService.publish(this.participantService.getMyScreenPublisher());
+				await this.openviduService.connectScreenSession(participantId, nickname);
+				await this.openviduService.publishScreen(screenPublisher);
 			} else {
-				await this.openviduService.connectSession(this.openviduService.getWebcamSession(), webcamToken);
-				await this.openviduService.publish(this.participantService.getMyCameraPublisher());
+				await this.openviduService.connectWebcamSession(participantId, nickname);
+				await this.openviduService.publishCamera(cameraPublisher);
 			}
 		} catch (error) {
 			// this._error.emit({ error: error.error, messgae: error.message, code: error.code, status: error.status });
