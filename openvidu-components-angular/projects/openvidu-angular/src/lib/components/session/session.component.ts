@@ -309,9 +309,10 @@ export class SessionComponent implements OnInit, OnDestroy {
 	private subscribeToConnectionCreatedAndDestroyed() {
 		this.session.on('connectionCreated', (event: ConnectionEvent) => {
 			const connectionId = event.connection?.connectionId;
-			const nickname: string = this.participantService.getNicknameFromConnectionData(event.connection.data);
+			const newNickname: string = this.participantService.getNicknameFromConnectionData(event.connection.data);
 			const isRemoteConnection: boolean = !this.openviduService.isMyOwnConnection(connectionId);
-			const isCameraConnection: boolean = !nickname?.includes(`_${VideoType.SCREEN}`);
+			const isCameraConnection: boolean = !newNickname?.includes(`_${VideoType.SCREEN}`);
+			const nickname = this.participantService.getMyNickname();
 			const data = event.connection?.data;
 
 			if (isRemoteConnection && isCameraConnection) {
@@ -319,7 +320,7 @@ export class SessionComponent implements OnInit, OnDestroy {
 				this.participantService.addRemoteConnection(connectionId, data, null);
 
 				//Sending nicnkanme signal to new participants
-				if (this.openviduService.needSendNicknameSignal()) {
+				if (this.openviduService.needSendNicknameSignal(nickname)) {
 					const data = { clientData: this.participantService.getMyNickname() };
 					this.openviduService.sendSignal(Signal.NICKNAME_CHANGED, [event.connection], data);
 				}
